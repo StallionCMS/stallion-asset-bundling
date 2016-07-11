@@ -163,4 +163,9 @@ public class AssetFile {
     public String getAbsolutePath() {
         return this.file.getAbsolutePath();
     }
+
+    public long getHydratedAt() {
+        return hydratedAt;
+    }
+
 }

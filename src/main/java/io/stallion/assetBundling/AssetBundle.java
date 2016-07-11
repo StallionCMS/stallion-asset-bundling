@@ -1,5 +1,6 @@
 package io.stallion.assetBundling;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -8,14 +9,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.security.MessageDigest;
 import java.util.*;
 
 public class AssetBundle {
     private File file;
     private long loadedAt = 0;
-
+    private String hash = null;
     private List<AssetFile> files = null;
     private Map<String, AssetFile> fileByPath = new HashMap<String, AssetFile>();
+    private String content;
+    private String md5 = null;
 
     public AssetBundle(File file) {
         this.file = file;
@@ -32,7 +36,7 @@ public class AssetBundle {
     public void hydrateFiles() {
         String directory = file.getParent();
         List<AssetFile> files = new ArrayList<AssetFile>();
-        String content = "";
+        content = "";
         try {
             content = FileUtils.readFileToString(file, "utf-8");
         } catch (IOException e) {
@@ -68,6 +72,7 @@ public class AssetBundle {
 
         this.loadedAt = new Date().getTime();
         this.files = files;
+        this.md5 = null;
     }
 
     private void addFilesForDirectoryGlob(List<AssetFile> files, String glob) {
@@ -258,5 +263,17 @@ public class AssetBundle {
             }
         }
         return paths;
+    }
+
+    public String getHash() {
+        if (md5 == null) {
+            MessageDigest md5Digest = DigestUtils.getMd5Digest();
+            md5Digest.update(this.content.getBytes());
+            for (AssetFile af: files) {
+                md5Digest.update(af.getRawContent().getBytes());
+            }
+            md5 = md5Digest.toString();
+        }
+        return md5;
     }
 }
