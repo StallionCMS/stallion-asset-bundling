@@ -3,9 +3,16 @@ package io.stallion.assetBundling.processors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vaadin.sass.internal.ScssContext;
+import com.vaadin.sass.internal.ScssStylesheet;
+import com.vaadin.sass.internal.handler.SCSSDocumentHandlerImpl;
+import com.vaadin.sass.internal.handler.SCSSErrorHandler;
 import io.stallion.assetBundling.AssetFile;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+
+import java.io.StringWriter;
+import java.net.URI;
 
 
 public class VueProcessor extends Processor {
@@ -16,12 +23,32 @@ public class VueProcessor extends Processor {
         String content = af.getRawContent();
         String css = "";
 
-        int index = content.indexOf("<style>");
+        int index = content.indexOf("<style");
+        int endTag = content.indexOf(">", index+1);
+
         int lastIndex = content.indexOf("</style>", index + 7);
 
+        // Add lines so that the end result source code lines match the line numbers in the original file,
+        // this is useful for debugging
+        int linesToAdd = 0;
         if (index != -1 && lastIndex > index) {
-            css = content.substring(index + 7, lastIndex);
+            String before = content.substring(0, index);
+            linesToAdd = StringUtils.countMatches(before, "\n") - 1;
+            if (linesToAdd < 0) {
+                linesToAdd = 0;
+            }
         }
+
+        if (index != -1 && endTag > index && lastIndex > endTag) {
+            String tag = content.substring(index, endTag + 1);
+            css = content.substring(endTag + 1, lastIndex);
+            if (tag.contains("lang=")) {
+                if (tag.contains("lang=scss") || tag.contains("lang='scss'") || tag.contains("lang=\"scss\"")) {
+                    css = toScssToCss(af, css);
+                }
+            }
+        }
+        css = StringUtils.repeat("\n", linesToAdd) + css;
         af.setCss(css);
 
 
@@ -36,7 +63,7 @@ public class VueProcessor extends Processor {
         index = content.indexOf("<script>");
         lastIndex = content.lastIndexOf("</script>");
         String script = "";
-        int linesToAdd = 0;
+        linesToAdd = 0;
         if (index != -1 && lastIndex > index) {
             script = content.substring(index + 8, lastIndex);
             String before = content.substring(0, index);
@@ -68,6 +95,27 @@ public class VueProcessor extends Processor {
 
         script += "})();";
         af.setJavaScript(script);
+    }
+
+    public String toScssToCss(AssetFile af, String scssContent) {
+        try {
+            SCSSErrorHandler errorHandler = new SCSSErrorHandler();
+            errorHandler.setWarningsAreErrors(true);
+            ScssStylesheet sheet = new ScssStylesheet();
+            sheet.addResolver(new ScssStringResolver(af.getAbsolutePath(), "vue", scssContent));
+            ScssStylesheet scss = ScssStylesheet.get("vue", sheet,
+                    new SCSSDocumentHandlerImpl(), errorHandler);
+            scss.compile(ScssContext.UrlMode.MIXED);
+            StringWriter writer = new StringWriter();
+            scss.write(writer, true);
+            writer.close();
+            if (errorHandler.isErrorsDetected()) {
+                throw new RuntimeException("Fatal errors while compiling scss for file " + af.getAbsolutePath() + ": " + errorHandler.toString());
+            }
+            return writer.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

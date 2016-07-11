@@ -183,4 +183,80 @@ public class AssetBundle {
         }
 
     }
+
+    public File getBundleFile() {
+        return file;
+    }
+
+    public List<AssetFile> getFiles() {
+        return files;
+    }
+
+    public String renderPath(String path, boolean autoReload) throws NotFoundException {
+        hydrateFilesIfNeeded(autoReload);
+        if (path.endsWith(".head.js")) {
+            path = path.substring(0, path.length() - 8);
+            AssetFile af = fileByPath.get(path);
+            if (af == null) {
+                throw new NotFoundException("No AssetFile for path " + path + " in bundle " + this.file.getAbsolutePath());
+            }
+            af.hydrateIfNeeded(autoReload);
+            return af.getHeadJavaScript();
+        } else if (path.endsWith(".js")) {
+            path = path.substring(0, path.length() - 3);
+            AssetFile af = fileByPath.get(path);
+            if (af == null) {
+                throw new NotFoundException("No AssetFile for path " + path + " in bundle " + this.file.getAbsolutePath());
+            }
+            af.hydrateIfNeeded(autoReload);
+            return af.getJavaScript();
+        } else if (path.endsWith(".css")) {
+            path = path.substring(0, path.length() - 4);
+            AssetFile af = fileByPath.get(path);
+            if (af == null) {
+                throw new NotFoundException("No AssetFile for path " + path + " in bundle " + this.file.getAbsolutePath());
+            }
+            af.hydrateIfNeeded(autoReload);
+            return af.getCss();
+        } else {
+            throw new RuntimeException("Unknown extension for path " + path);
+        }
+    }
+
+    public List<String> listHeadJavaScriptPaths(boolean autoReload) {
+        hydrateFilesIfNeeded(autoReload);
+        List<String> paths = new ArrayList<String>();
+        for(AssetFile af: files) {
+            af.hydrateIfNeeded(autoReload);
+            if (af.getHeadJavaScript().length() > 0) {
+                paths.add(af.getRelativePath());
+            }
+        }
+        return paths;
+    }
+
+
+    public List<String> listCssPaths(boolean autoReload) {
+        hydrateFilesIfNeeded(autoReload);
+        List<String> paths = new ArrayList<String>();
+        for(AssetFile af: files) {
+            af.hydrateIfNeeded(autoReload);
+            if (af.getCss().length() > 0) {
+                paths.add(af.getRelativePath());
+            }
+        }
+        return paths;
+    }
+
+    public List<String> listJavascriptPaths(boolean autoReload) {
+        hydrateFilesIfNeeded(autoReload);
+        List<String> paths = new ArrayList<String>();
+        for(AssetFile af: files) {
+            af.hydrateIfNeeded(autoReload);
+            if (af.getJavaScript().length() > 0) {
+                paths.add(af.getRelativePath());
+            }
+        }
+        return paths;
+    }
 }

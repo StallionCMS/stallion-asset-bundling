@@ -23,8 +23,17 @@ public class TestEndToEnd {
         String path = Paths.get(resourceUrl.toURI()).toString();
         File cssFile = new File(path + ".css");
         String css = FileUtils.readFileToString(cssFile, "UTF-8");
+        // Basic CSS
         assertTrue(css.contains("background-color: blue"));
+        // Vue CSS
         assertTrue(css.contains(".red-thing-vue {"));
+        // SCSS
+        assertTrue(css.contains(".partial-stuff bold{font-size:17px}.main-column div,.main-column p{font-family:sans-serif}"));
+        // Vue SCSS
+        assertTrue(css.contains(".with-scss h2{font-family:comic sans,avenir;color:green;background-color:#700}"));
+
+
+
         assertTrue(!css.contains("console.log"));
         assertTrue(!css.contains("background-color: yellow;"));
 

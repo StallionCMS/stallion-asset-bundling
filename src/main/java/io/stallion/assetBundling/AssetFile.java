@@ -159,4 +159,8 @@ public class AssetFile {
         this.javaScript = javaScript;
         return this;
     }
+
+    public String getAbsolutePath() {
+        return this.file.getAbsolutePath();
+    }
 }

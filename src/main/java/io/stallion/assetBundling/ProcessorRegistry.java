@@ -23,7 +23,7 @@ public class ProcessorRegistry {
     ProcessorRegistry() {
         register(new CommandProcessor());
         register(new DefaultProcessor());
-        register(new SassProcessor());
+        register(new ScssProcessor());
         register(new VueProcessor());
     }
 
