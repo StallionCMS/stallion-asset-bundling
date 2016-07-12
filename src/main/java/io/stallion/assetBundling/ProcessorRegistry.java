@@ -46,14 +46,12 @@ public class ProcessorRegistry {
 
     public boolean processorExistsForExtension(String extension) {
         boolean result = processorByExtension.containsKey(extension);
-        System.out.println("Processor for extension " + extension + " result is " + result);
         return result;
     }
 
     public Processor getProcessorByExtension(String extension) {
 
         Processor p = processorByExtension.get(extension);
-        System.out.println("Processor is " + p.getClass().getCanonicalName());
         return p;
     }
 }

@@ -44,7 +44,6 @@ public class AssetBundle {
         }
         List<String> lines = Arrays.asList(content.split("\n"));
         for(String line: lines) {
-            System.out.println("");
             if ("".equals(line.trim())) {
                 continue;
             }
@@ -57,9 +56,8 @@ public class AssetBundle {
             Map<String, String> params = splitQuery(query);
             String[] parts = line.split("\\|");
             String path = parts[0];
-            System.out.println("Directory: " + directory + " Path: " + path);
             if (path.contains("*")) {
-                addFilesForDirectoryGlob(files, directory + "/" + path);
+                addFilesForDirectoryGlob(files, directory + "/" + path, directory);
             } else if (fileByPath.containsKey(path)) {
                 files.add(fileByPath.get(path));
             } else{
@@ -75,7 +73,7 @@ public class AssetBundle {
         this.md5 = null;
     }
 
-    private void addFilesForDirectoryGlob(List<AssetFile> files, String glob) {
+    private void addFilesForDirectoryGlob(List<AssetFile> files, String glob, String bundleDirectory) {
         String[] parts = StringUtils.split(glob, "*", 2);
         String directory = parts[0];
         String end = parts[1];
@@ -97,7 +95,7 @@ public class AssetBundle {
             if (name.startsWith(".") || name.startsWith("~") || name.startsWith("#") || name.contains("flycheck.")) {
                 continue;
             }
-            String relativePath = file.getAbsolutePath().replace(directory, "");
+            String relativePath = file.getAbsolutePath().replace(bundleDirectory, "");
             AssetFile af = fileByPath.getOrDefault(relativePath, null);
             if (af == null) {
                 af = new AssetFile(file.getAbsolutePath(), relativePath, new HashMap<String, String>());
@@ -148,7 +146,6 @@ public class AssetBundle {
         StringBuilder builder = new StringBuilder();
         for (AssetFile f: files) {
             if (!"".equals(f.getJavaScript())) {
-                System.out.print("AssetFile " + f.getRelativePath() + " js:" + f.getJavaScript());
                 builder.append("\n// from " + f.getRelativePath() + "\n" + f.getJavaScript());
             }
         }

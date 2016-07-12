@@ -45,11 +45,15 @@ public class BundleRegistry {
         if (url == null) {
                 throw new NotFoundException("Could not find resourece for bundle " + path + " in class loader for " + cls.getCanonicalName());
         }
+
         try {
-            return getByPath(url.toURI().getPath());
+            //System.err.println("ASSET URL IS " + url + " URI IS" + url.toURI());
+            //System.err.println("ABS PATH " + new File(url.toURI()).getAbsolutePath());
+            return getByPath(new File(url.toURI()).getAbsolutePath());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }
+
 
 }
