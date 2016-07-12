@@ -65,4 +65,35 @@
 
 
   </dependencies>
+    <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>2.4</version>
+            </extension>
+        </extensions>
+    </build>
+    <distributionManagement>
+        <downloadUrl>http://mvn.stallion.io/repo</downloadUrl>
+        <repository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>stallion-repo</id>
+            <name>Stallion Software Maven Repository</name>
+            <url>scp://mvn.stallion.io/usr/share/maven-repo/</url>
+            <layout>default</layout>
+        </repository>
+    </distributionManagement>
+    <repositories>
+        <repository>
+            <id>stallion-repo</id>
+            <url>http://mvn.stallion.io/repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
 </project>
