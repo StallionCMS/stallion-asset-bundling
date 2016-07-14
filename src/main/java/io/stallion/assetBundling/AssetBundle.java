@@ -95,6 +95,17 @@ public class AssetBundle {
             if (name.startsWith(".") || name.startsWith("~") || name.startsWith("#") || name.contains("flycheck.")) {
                 continue;
             }
+            // Hack to prevent including temporary generated files created by a previous run.
+            // TODO: make this less hacky
+            if (name.contains(".css.css")) {
+                continue;
+            }
+            if (name.contains(".js.js")) {
+                continue;
+            }
+            if (name.contains(".js.head.js")) {
+                continue;
+            }
             String relativePath = file.getAbsolutePath().replace(bundleDirectory, "");
             AssetFile af = fileByPath.getOrDefault(relativePath, null);
             if (af == null) {
