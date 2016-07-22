@@ -186,7 +186,7 @@ public class AssetBundle {
         StringBuilder builder = new StringBuilder();
         for (AssetFile f: files) {
             if (!"".equals(f.getCss())) {
-                builder.append("\n // from " + f.getRelativePath() + "\n" + f.getCss());
+                builder.append("\n /* from " + f.getRelativePath() + "*/\n" + f.getCss());
             }
         }
         File out = new File(file.getAbsoluteFile() + ".css");
