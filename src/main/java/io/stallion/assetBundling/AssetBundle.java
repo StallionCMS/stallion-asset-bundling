@@ -4,11 +4,17 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.util.*;
 
@@ -20,6 +26,7 @@ public class AssetBundle {
     private Map<String, AssetFile> fileByPath = new HashMap<String, AssetFile>();
     private String content;
     private String md5 = null;
+    private Map<String, Set<String>> globbedFoldersFileNames;
 
     public AssetBundle(File file) {
         this.file = file;
@@ -28,14 +35,38 @@ public class AssetBundle {
     public void hydrateFilesIfNeeded(boolean autoReload) {
         if (files == null) {
             hydrateFiles();
-        } else if (autoReload && file.lastModified() > loadedAt)  {
-            hydrateFiles();
+        } else if (autoReload) {
+            if (file.lastModified() > loadedAt)  {
+                hydrateFiles();
+            } else {
+                boolean newFilesFound = false;
+                for (Map.Entry<String, Set<String>> entry: globbedFoldersFileNames.entrySet()) {
+                    boolean hasNew = globbedFolderHasChangedFiles(entry.getKey(), entry.getValue());
+                    if (hasNew == true) {
+                        newFilesFound = true;
+                        break;
+                    }
+                }
+                if (newFilesFound) {
+                    hydrateFiles();
+                }
+            }
         }
     }
 
     public void hydrateFiles() {
+        long localLoaded = new Date().getTime();
+        synchronized (this) {
+            if (loadedAt >= localLoaded) {
+                return;
+            }
+            doHydrateFiles();
+        }
+    }
+    public void doHydrateFiles() {
         String directory = file.getParent();
         List<AssetFile> files = new ArrayList<AssetFile>();
+        globbedFoldersFileNames = new HashMap<String, Set<String>>();
         content = "";
         try {
             content = FileUtils.readFileToString(file, "utf-8");
@@ -56,12 +87,15 @@ public class AssetBundle {
             Map<String, String> params = splitQuery(query);
             String[] parts = line.split("\\|");
             String path = parts[0];
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
             if (path.contains("*")) {
-                addFilesForDirectoryGlob(files, directory + "/" + path, directory);
+                addFilesForDirectoryGlob(files, directory + path, directory);
             } else if (fileByPath.containsKey(path)) {
                 files.add(fileByPath.get(path));
             } else{
-                AssetFile af = new AssetFile(directory + "/" + path, path, params);
+                AssetFile af = new AssetFile(directory + path, path, params);
                 files.add(af);
                 fileByPath.put(path, af);
             }
@@ -73,6 +107,24 @@ public class AssetBundle {
         this.md5 = null;
     }
 
+    private boolean globbedFolderHasChangedFiles(String directory, Set<String> existingFiles) {
+        Set<String> existingCopy = new HashSet<String>(existingFiles);
+        Iterator<File> fileIterator = FileUtils.iterateFiles(new File(directory), null, true);
+        while (fileIterator.hasNext()) {
+            File file = fileIterator.next();
+            if (!existingFiles.contains(file.getName())) {
+                return true;
+            } else {
+                existingCopy.remove(file.getName());
+            }
+        }
+        if (existingCopy.size() > 0) {
+            return true;
+        }
+
+        return false;
+    }
+
     private void addFilesForDirectoryGlob(List<AssetFile> files, String glob, String bundleDirectory) {
         String[] parts = StringUtils.split(glob, "*", 2);
         String directory = parts[0];
@@ -82,9 +134,15 @@ public class AssetBundle {
             pre = FilenameUtils.getName(directory);
             directory = new File(directory).getParent();
         }
+
+        Set<String> foundFiles = new HashSet<String>();
+        globbedFoldersFileNames.put(directory, foundFiles);
+
+
         Iterator<File> fileIterator = FileUtils.iterateFiles(new File(directory), null, true);
         while (fileIterator.hasNext()) {
             File file = fileIterator.next();
+            foundFiles.add(file.getName());
             if (end.length() > 0 && !file.getAbsolutePath().endsWith(end)) {
                 continue;
             }
