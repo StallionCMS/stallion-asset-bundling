@@ -33,12 +33,16 @@ public class AssetBundle {
     }
 
     public void hydrateFilesIfNeeded(boolean autoReload) {
+        hydrateFilesIfNeeded(autoReload, autoReload);
+    }
+
+    public void hydrateFilesIfNeeded(boolean autoReload, boolean checkGlobbed) {
         if (files == null) {
             hydrateFiles();
         } else if (autoReload) {
             if (file.lastModified() > loadedAt)  {
                 hydrateFiles();
-            } else {
+            } else if (checkGlobbed) {
                 boolean newFilesFound = false;
                 for (Map.Entry<String, Set<String>> entry: globbedFoldersFileNames.entrySet()) {
                     boolean hasNew = globbedFolderHasChangedFiles(entry.getKey(), entry.getValue());
@@ -75,6 +79,7 @@ public class AssetBundle {
         }
         List<String> lines = Arrays.asList(content.split("\n"));
         for(String line: lines) {
+            line = line.trim();
             if ("".equals(line.trim())) {
                 continue;
             }
@@ -212,28 +217,16 @@ public class AssetBundle {
     }
 
     protected void writeJavaScript() throws IOException {
-        StringBuilder builder = new StringBuilder();
-        for (AssetFile f: files) {
-            if (!"".equals(f.getJavaScript())) {
-                builder.append("\n// from " + f.getRelativePath() + "\n" + f.getJavaScript());
-            }
-        }
         File out = new File(file.getAbsoluteFile() + ".js");
-        String source = builder.toString();
+        String source = getConcatenatedJavaScript();
         if (!"".equals(source.trim())) {
             FileUtils.write(out, source, "UTF-8");
         }
     }
 
     protected void writeHeadJavaScript() throws IOException {
-        StringBuilder builder = new StringBuilder();
-        for (AssetFile f: files) {
-            if (!"".equals(f.getHeadJavaScript())) {
-                builder.append("\n// from " + f.getRelativePath() + "\n" + f.getHeadJavaScript());
-            }
-        }
         File out = new File(file.getAbsoluteFile() + ".head.js");
-        String source = builder.toString();
+        String source = getConcatenatedHeadJavaScript();
         if (!"".equals(source.trim())) {
             FileUtils.write(out, source, "UTF-8");
         }
@@ -241,18 +234,49 @@ public class AssetBundle {
     }
 
     protected void writeCss() throws IOException {
+        File out = new File(file.getAbsoluteFile() + ".css");
+        String source = getConcatenatedCss();
+        if (!"".equals(source.trim())) {
+            FileUtils.write(out, source, "UTF-8");
+        }
+
+    }
+
+    public void hydrateAllFilesIfNeeded(boolean autoReload) {
+        hydrateFilesIfNeeded(autoReload);
+        for (AssetFile file: files) {
+            file.hydrateIfNeeded(autoReload);
+        }
+    }
+
+    public String getConcatenatedJavaScript() {
+        StringBuilder builder = new StringBuilder();
+        for (AssetFile f: files) {
+            if (!"".equals(f.getJavaScript())) {
+                builder.append("\n// from " + f.getRelativePath() + "\n" + f.getJavaScript());
+            }
+        }
+        return builder.toString();
+    }
+
+    public String getConcatenatedHeadJavaScript() {
+        StringBuilder builder = new StringBuilder();
+        for (AssetFile f: files) {
+            if (!"".equals(f.getHeadJavaScript())) {
+                builder.append("\n// from " + f.getRelativePath() + "\n" + f.getHeadJavaScript());
+            }
+        }
+        return builder.toString();
+    }
+
+    public String getConcatenatedCss() {
         StringBuilder builder = new StringBuilder();
         for (AssetFile f: files) {
             if (!"".equals(f.getCss())) {
                 builder.append("\n /* from " + f.getRelativePath() + "*/\n" + f.getCss());
             }
         }
-        File out = new File(file.getAbsoluteFile() + ".css");
-        String source = builder.toString();
-        if (!"".equals(source.trim())) {
-            FileUtils.write(out, source, "UTF-8");
-        }
-
+        return builder.toString();
     }
 
     public File getBundleFile() {
@@ -265,6 +289,9 @@ public class AssetBundle {
 
     public String renderPath(String path, boolean autoReload) throws NotFoundException {
         hydrateFilesIfNeeded(autoReload);
+        if (!path.startsWith("/")) {
+            path = "/" + path;
+        }
         if (path.endsWith(".head.js")) {
             path = path.substring(0, path.length() - 8);
             AssetFile af = fileByPath.get(path);
